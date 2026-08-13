@@ -782,7 +782,7 @@ export const ROUTE = {
         "5": "1e900IP"
       },
       "reqRaw": "1 = 17300 8th Dimensions , 2 = 18550 8th Dimensions , 3 = 19800 8th Dimensions , 4 = 21050 8th Dimensions , 5 = 22300 8th Dimensions",
-      "restriction": "Dimensions 5,6,7 and 8 do not produce lower Dimensions.",
+      "restriction": "Antimatter Dimensions 5-8 don't produce anything. Dimensional Sacrifice is disabled.",
       "tips": "Reaching the requirement to buy this challenge is quite hard, it is recommended to use your normal farming tree (with 40TT spare) to reach the requirement and buy EC3, you can then respec and use a different tree to do the challenge. With reduced power from not having the 5th Dimension and above working this challenge stays at low IP amounts which cause RG to take long. With such a low IP amount the AD or ID paths work best."
     },
     "4": {
@@ -801,7 +801,7 @@ export const ROUTE = {
         "5": "1e4950IP in 0 Infinities"
       },
       "reqRaw": "1 = 100M Infinities , 2 = 125M Infinities , 3 = 150M Infinities , 4 = 175M Infinities , 5 = 200M Infinities",
-      "restriction": "Infinity stat multiplier is disabled and you must complete the challenge in a certain amount of Infinities.",
+      "restriction": "All Infinity multipliers and generators are disabled and you must complete the challenge in a limited number of Infinities.",
       "tips": "This is the first EC with a condition which will allow you to fail. If you fail it will exit the challenge but will not respec your time studies so you can just start the challenge again. Let AM build up before your first crunch, after that it is recommended to wait for max RG between each crunch."
     },
     "5": {
@@ -858,8 +858,8 @@ export const ROUTE = {
         "5": "1e4120IP"
       },
       "reqRaw": "1 = 1e500000AM , 2 = 1e800000AM , 3 = 1e1100000AM , 4 = 1e1400000AM , 5 = 1e1700000AM",
-      "restriction": "Time Dimensions and Infinity Dimensions do not give their multipliers, they instead work like Antimatter Dimensions and increase Dimension 7.",
-      "tips": "Similar to EC3 reaching the requirement would require the use of different tree than is used within the challenge. With Time Dimensions and Infinity Dimensions working like Antimatter Dimensions using their paths gives them very small bonuses, it is much better to use the Antimatter Dimension Path. If you can reach the AM required the challenge should be easy to complete, the only exception is the 5th completion."
+      "restriction": "1st Time Dimensions produce 8th Infinity Dimensions and 1st Infinity Dimensions produce 7th Antimatter Dimensions. Tickspeed also applies to Infinity and Time Dimensions.",
+      "tips": "Similar to EC3 reaching the requirement would require the use of different tree than is used within the challenge. With TD and ID production rerouted down the dimension chain instead of multiplying, their study paths pay off far less than usual — the Antimatter Dimension path works best. If you can reach the AM required the challenge should be easy to complete, the only exception is the 5th completion."
     },
     "8": {
       "req": {
@@ -928,7 +928,7 @@ export const ROUTE = {
         "5": "1e1250IP"
       },
       "reqRaw": "Antimatter Dimension Path Only.",
-      "restriction": "All multipliers are disabled except from buying 10 of a Dimension and Infinity Power.",
+      "restriction": "All Dimension multipliers are disabled except the multipliers from Infinity Power and Dimension Boosts.",
       "tips": "All dimension multipliers are disabled, that includes for Infinity Dimensions and Time Dimensions. This will be the slowest challenge once you get to the higher completions. One last time almost all multipliers are disabled, remember this, understand this. Studies that reduce costs or increase IP gain are best, multipliers are useless."
     },
     "12": {

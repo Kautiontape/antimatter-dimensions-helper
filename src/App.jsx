@@ -24,7 +24,9 @@ export default function App() {
           >GitHub</a>
         </div>
       </header>
-      <Tool />
+      <main>
+        <Tool />
+      </main>
       <footer className="sitefoot">
         <span>
           A fan-made companion for{" "}

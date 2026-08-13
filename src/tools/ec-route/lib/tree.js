@@ -2,10 +2,11 @@ import { TS, EC_COST } from "../data/studies.js";
 import { CHAIN, PACE_CHAIN, ALL_CHAIN } from "./constants.js";
 
 export function parseTree(s) {
-  const [body, ec] = String(s).split("|");
+  const [body, ecRaw] = String(s).split("|");
+  const ec = Number(ecRaw || 0);
   return {
     ids: body.split(",").map((x) => Number(String(x).trim())).filter((n) => !isNaN(n) && n > 0),
-    ec: Number(ec || 0),
+    ec: Number.isInteger(ec) && EC_COST[ec] ? ec : 0,
   };
 }
 
@@ -70,40 +71,39 @@ function ancestorsPresent(id, set) {
 // Clean a tree while preserving the author's purchase order. The importer buys
 // left to right and skips what you can't afford, so the sequence carries intent:
 // only move a study when a prerequisite would otherwise come after it.
-export function repairTree(raw) {
-  const { ids, ec } = parseTree(raw);
-  const notes = [];
-  let seq = [];
-  ids.forEach((i) => {
-    if (!TS.cost[i]) notes.push(`dropped unknown study ${i}`);
-    else if (seq.includes(i)) notes.push(`dropped duplicate ${i}`);
-    else seq.push(i);
-  });
+// Drop studies that break the game's split rules: one dimension path without
+// TS201 (three with it), one pace path, one of each light/dark pair.
+function enforceLimits(seq, notes) {
+  let out = seq.slice();
   const enforce = (group, label, limit) => {
-    const have = seq.filter((i) => group.includes(i));
+    const have = out.filter((i) => group.includes(i));
     have.slice(limit).forEach((i) => {
       const name = Object.keys(CHAIN).find((k) => CHAIN[k][0] === i);
       const chain = name ? CHAIN[name] : Object.values(PACE_CHAIN).find((c) => c[0] === i) || [i];
-      seq = seq.filter((x) => !chain.includes(x));
+      out = out.filter((x) => !chain.includes(x));
       notes.push(`dropped ${name || i} (${label})`);
     });
   };
-  if (!seq.includes(201)) enforce([71, 72, 73], "needs TS201 for a second path", 1);
+  if (!out.includes(201)) enforce([71, 72, 73], "needs TS201 for a second path", 1);
   else {
     enforce([71, 72, 73], "max three paths", 3);
-    if (seq.filter((i) => [71, 72, 73].includes(i)).length > 2) {
+    if (out.filter((i) => [71, 72, 73].includes(i)).length > 2) {
       notes.push("three dimension paths need the 1e10 DT upgrade");
     }
   }
   enforce([121, 122, 123], "one pace path only", 1);
   TS.pairs.forEach(([a, b]) => {
-    if (seq.includes(a) && seq.includes(b)) {
-      const drop = seq.indexOf(a) < seq.indexOf(b) ? b : a;
-      seq = seq.filter((i) => i !== drop);
+    if (out.includes(a) && out.includes(b)) {
+      const drop = out.indexOf(a) < out.indexOf(b) ? b : a;
+      out = out.filter((i) => i !== drop);
       notes.push(`dropped ${drop} (light/dark pair)`);
     }
   });
-  // Stable topological pass over the author's sequence.
+  return out;
+}
+
+// Stable topological pass over the author's sequence, inserting missing prereqs.
+function topoSort(seq, notes) {
   const out = [];
   let pending = seq.slice();
   for (let guard = 0; pending.length && guard < 600; guard++) {
@@ -132,7 +132,28 @@ export function repairTree(raw) {
     pending.splice(pending.indexOf(block), 0, pick);
     notes.push(`added ${pick} (required by ${block})`);
   }
-  return { tree: joinTree(out, ec), ids: out, ec, cost: treeCost(out) + (ec ? EC_COST[ec] : 0), notes };
+  return out;
+}
+
+export function repairTree(raw) {
+  const { ids, ec } = parseTree(raw);
+  const notes = [];
+  let seq = [];
+  ids.forEach((i) => {
+    if (!TS.cost[i]) notes.push(`dropped unknown study ${i}`);
+    else if (seq.includes(i)) notes.push(`dropped duplicate ${i}`);
+    else seq.push(i);
+  });
+  // Prereq insertion can smuggle in a second path start (e.g. 81 pulls in 71
+  // next to an existing 72 with no TS201), so limits and the topological pass
+  // must run until they agree.
+  let out = seq;
+  for (let pass = 0; pass < 4; pass++) {
+    const next = topoSort(enforceLimits(out, notes), notes);
+    if (next.join() === out.join()) break;
+    out = next;
+  }
+  return { tree: joinTree(out, ec), ids: out, ec, cost: treeCost(out) + (EC_COST[ec] || 0), notes };
 }
 
 // EC completions a tree still needs, e.g. TS181 requires EC1-3 at one completion each.

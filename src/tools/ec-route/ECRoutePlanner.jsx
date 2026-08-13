@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ROUTE } from "./data/route.js";
 import { FARMS } from "./data/farms.js";
 import { PACE_CHAIN, DEFAULT_ORDER } from "./lib/constants.js";
+import { keyOf, ENTRY_BY_KEY, DEFAULT_ROUTE } from "./lib/keys.js";
 import { parseTree, joinTree, treeCost, whichOf, pathsIn, swapChain, setPaths, unmetReqs } from "./lib/tree.js";
+import { sanitizeConfig } from "./lib/sanitize.js";
 import { loadSaved, saveState } from "./lib/storage.js";
 import { useCopy } from "./hooks/useCopy.js";
+import { TtInput } from "./components/TtInput.jsx";
 import { ProgressRail } from "./components/ProgressRail.jsx";
 import { CompletionsGrid } from "./components/CompletionsGrid.jsx";
 import { FarmSection } from "./components/FarmSection.jsx";
@@ -14,24 +17,11 @@ import { LockedSection } from "./components/LockedSection.jsx";
 
 const EMPTY = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0 };
 
-export const keyOf = (e) => `${e.ec}x${e.comp}`;
-export const DEFAULT_ROUTE = ROUTE.entries.slice().sort((a, b) => a.order - b.order).map(keyOf);
-
-const ENTRY_BY_KEY = {};
-ROUTE.entries.forEach((e) => { ENTRY_BY_KEY[keyOf(e)] = e; });
-
-// A stored route is only usable if it's a permutation of the shipped one.
-function validRoute(order) {
-  return Array.isArray(order)
-    && order.length === DEFAULT_ROUTE.length
-    && new Set(order).size === order.length
-    && order.every((k) => ENTRY_BY_KEY[k]);
-}
-
-const saved = loadSaved() || {};
+// localStorage carries the same untrusted shape as a pasted import.
+const saved = sanitizeConfig(loadSaved());
 
 export default function ECRoutePlanner() {
-  const [tt, setTt] = useState(typeof saved.tt === "number" ? saved.tt : 0);
+  const [tt, setTt] = useState(saved.tt ?? 0);
   const [comps, setComps] = useState({ ...EMPTY, ...(saved.comps || {}) });
   const [showAll, setShowAll] = useState(false);
   const [hideDone, setHideDone] = useState(false);
@@ -39,10 +29,11 @@ export default function ECRoutePlanner() {
   const [capacity, setCapacity] = useState(saved.capacity || 1);
   const [orders, setOrders] = useState({ ...DEFAULT_ORDER, ...(saved.orders || {}) });
   const [mode, setMode] = useState(saved.mode || "ep");
-  const [customs, setCustoms] = useState(Array.isArray(saved.customs) ? saved.customs : []);
-  const [routeOrder, setRouteOrder] = useState(validRoute(saved.routeOrder) ? saved.routeOrder : DEFAULT_ROUTE);
+  const [customs, setCustoms] = useState(saved.customs || []);
+  const [routeOrder, setRouteOrder] = useState(saved.routeOrder || DEFAULT_ROUTE);
   const [panel, setPanel] = useState(false);
   const [lastMark, setLastMark] = useState(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [copied, copy] = useCopy();
 
   // Debounced autosave of everything worth keeping.
@@ -52,6 +43,13 @@ export default function ECRoutePlanner() {
     }, 400);
     return () => clearTimeout(id);
   }, [tt, comps, pace, mode, capacity, orders, customs, routeOrder]);
+
+  // "really reset?" reverts on its own if the second click never comes.
+  useEffect(() => {
+    if (!confirmReset) return;
+    const id = setTimeout(() => setConfirmReset(false), 4000);
+    return () => clearTimeout(id);
+  }, [confirmReset]);
 
   // Entries in the user's route order, each stamped with its step index.
   const orderedEntries = useMemo(
@@ -89,9 +87,10 @@ export default function ECRoutePlanner() {
 
   const order = orders[mode] || DEFAULT_ORDER[mode];
 
+  // Farm tiers are mode-specific; customs remember the mode they were added in.
   const farm = useMemo(() => {
     const catalog = FARMS.filter((f) => (f.mode || "ep") === mode)
-      .concat(customs.map((c) => ({ ...c, mode, custom: true })));
+      .concat(customs.filter((c) => (c.mode || "ep") === mode).map((c) => ({ ...c, custom: true })));
     const built = catalog.map((f) => {
       const { ids, ec } = parseTree(f.tree);
       const basePace = whichOf(ids, PACE_CHAIN);
@@ -136,7 +135,9 @@ export default function ECRoutePlanner() {
     : rows.filter((r) => !r.entry || r.affordable || r.deficit <= (nextGate ? Math.max(nextGate.deficit, 1) : 1) * 1.5)
   ).filter((r) => !hideDone || r.entry);
 
-  const reachIndex = orderedEntries.filter((e) => e.tt <= tt).length;
+  // Furthest step the current TT can afford — an index, not a count, so a
+  // custom (non-monotonic) route order still marks the right tick.
+  const hereIndex = orderedEntries.reduce((h, e, i) => (e.tt <= tt ? i : h), -1);
   const routeIsCustom = routeOrder.join(",") !== DEFAULT_ROUTE.join(",");
 
   function setComp(ec, v) {
@@ -151,15 +152,27 @@ export default function ECRoutePlanner() {
     setComp(lastMark.ec, lastMark.prev);
     setLastMark(null);
   }
+  function resetTracker() {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+    setComps(EMPTY);
+    setTt(0);
+    setConfirmReset(false);
+  }
+  // Returns the field names actually applied, so the UI can say what happened.
   function importConfig(v) {
-    if (typeof v.tt === "number") setTt(v.tt);
-    if (v.comps) setComps({ ...EMPTY, ...v.comps });
-    if (v.pace) setPace(v.pace);
-    if (v.mode) setMode(v.mode);
-    if (v.capacity) setCapacity(v.capacity);
-    if (v.orders) setOrders({ ...DEFAULT_ORDER, ...v.orders });
-    if (Array.isArray(v.customs)) setCustoms(v.customs);
-    if (validRoute(v.routeOrder)) setRouteOrder(v.routeOrder);
+    const clean = sanitizeConfig(v);
+    if (clean.tt !== undefined) setTt(clean.tt);
+    if (clean.comps) setComps(clean.comps);
+    if (clean.pace) setPace(clean.pace);
+    if (clean.mode) setMode(clean.mode);
+    if (clean.capacity) setCapacity(clean.capacity);
+    if (clean.orders) setOrders(clean.orders);
+    if (clean.customs) setCustoms(clean.customs);
+    if (clean.routeOrder) setRouteOrder(clean.routeOrder);
+    return Object.keys(clean);
   }
 
   return (
@@ -171,30 +184,26 @@ export default function ECRoutePlanner() {
             <h1>What can I run right now?</h1>
           </div>
           <div className="topstats">
-            <div className="ttbox">
-              <span className="eyebrow" style={{ marginRight: 2 }}>Total TT</span>
-              <button className="stepbtn" onClick={() => setTt((v) => Math.max(0, v - 1))} aria-label="Decrease TT">−</button>
-              <input
-                type="number"
-                value={tt}
-                min="0"
-                onChange={(e) => setTt(Math.max(0, Number(e.target.value) || 0))}
-                aria-label="Total time theorems"
-              />
-              <button className="stepbtn" onClick={() => setTt((v) => v + 1)} aria-label="Increase TT">+</button>
-            </div>
+            <TtInput tt={tt} setTt={setTt} />
             <div className="stat">
               <b>{totalDone}</b>/60 completions · <b>{ready.length}</b> ready now
             </div>
           </div>
         </div>
 
-        <ProgressRail entries={orderedEntries} comps={comps} tt={tt} reachIndex={reachIndex} totalDone={totalDone} />
+        <ProgressRail entries={orderedEntries} comps={comps} tt={tt} hereIndex={hereIndex} totalDone={totalDone} />
 
         <CompletionsGrid
           rows={visibleEcs} meta={ROUTE.meta} setComp={setComp}
           hideDone={hideDone} setHideDone={setHideDone}
           showAll={showAll} setShowAll={setShowAll}
+        />
+
+        <ReadySection
+          ready={ready} meta={ROUTE.meta} tt={tt} stepOf={stepOf}
+          copied={copied} copy={copy}
+          markDone={markDone} lastMark={lastMark} undoMark={undoMark} dismissMark={() => setLastMark(null)}
+          ec8farm={ROUTE.ec8farm} routeIsCustom={routeIsCustom}
         />
 
         <FarmSection
@@ -209,7 +218,7 @@ export default function ECRoutePlanner() {
 
         {panel && (
           <SettingsPanel
-            comps={comps} customs={customs} setCustoms={setCustoms}
+            comps={comps} mode={mode} customs={customs} setCustoms={setCustoms}
             copied={copied} copy={copy}
             exportState={{ tt, comps, pace, mode, capacity, orders, customs, routeOrder }}
             importConfig={importConfig}
@@ -218,13 +227,6 @@ export default function ECRoutePlanner() {
             routeIsCustom={routeIsCustom} defaultRoute={DEFAULT_ROUTE}
           />
         )}
-
-        <ReadySection
-          ready={ready} meta={ROUTE.meta} tt={tt} stepOf={stepOf}
-          copied={copied} copy={copy}
-          markDone={markDone} lastMark={lastMark} undoMark={undoMark} dismissMark={() => setLastMark(null)}
-          ec8farm={ROUTE.ec8farm} routeIsCustom={routeIsCustom}
-        />
 
         <LockedSection
           locked={locked} meta={ROUTE.meta} stepOf={stepOf}
@@ -249,7 +251,13 @@ export default function ECRoutePlanner() {
             Route, TT numbers and study trees from the community sheet “Antimatter Dimensions — Eternity and Eternity Challenges”.
             Trees are recommendations, not the only way through.
           </span>
-          <button className="more" onClick={() => { setComps(EMPTY); setTt(0); }}>reset tracker</button>
+          <button
+            className="more"
+            style={confirmReset ? { color: "var(--warn)" } : undefined}
+            onClick={resetTracker}
+          >
+            {confirmReset ? "really reset TT & completions?" : "reset tracker"}
+          </button>
         </div>
       </div>
     </div>

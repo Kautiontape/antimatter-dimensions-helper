@@ -1,4 +1,4 @@
-import { PATH_COLOR } from "../lib/constants.js";
+import { PATH_COLOR, PATH_NAME } from "../lib/constants.js";
 
 // Per-EC completion counters, colored by the path the next completion wants.
 export function CompletionsGrid({ rows, meta, setComp, hideDone, setHideDone, showAll, setShowAll }) {
@@ -14,6 +14,9 @@ export function CompletionsGrid({ rows, meta, setComp, hideDone, setHideDone, sh
           show out-of-range
         </button>
       </div>
+      <div className="lede">
+        Tags show the dimension path each challenge's tree uses — AD antimatter, ID infinity, TD time.
+      </div>
       <div className="grid">
         {rows.map((r) => {
           const m = meta[r.ec];
@@ -23,7 +26,7 @@ export function CompletionsGrid({ rows, meta, setComp, hideDone, setHideDone, sh
               <div className="name">
                 <span className="ecname">EC{r.ec}</span>
                 {r.entry ? (
-                  <span className="tag">{r.entry.path || "—"}</span>
+                  <span className="tag" title={PATH_NAME[r.entry.path] || ""}>{r.entry.path || "—"}</span>
                 ) : (
                   <span className="tag" style={{ color: "var(--go)" }}>done</span>
                 )}

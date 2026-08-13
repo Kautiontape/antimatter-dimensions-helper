@@ -1,4 +1,4 @@
-import { PATH_COLOR, CAP_NOTE } from "../lib/constants.js";
+import { PATH_COLOR, PATH_NAME, CAP_NOTE } from "../lib/constants.js";
 import { TreeBar } from "./TreeBar.jsx";
 
 // The best farming tree you can afford right now, with pace / path controls.
@@ -26,13 +26,16 @@ export function FarmSection({
       {best ? (
         <div className="row" style={{ "--pc": PATH_COLOR[best.shownPaths[best.shownPaths.length - 1]] || "var(--go)" }}>
           <div className="rhead">
+            <span className="seglabel">Tree tier</span>
             <span className="rlabel">{best.cost} TT</span>
             {best.delta !== 0 && (
               <span className="rmeta mono">
                 {best.baseCost} sourced {best.delta > 0 ? "+" : "−"}{Math.abs(best.delta)}
               </span>
             )}
-            <span className="tag">{best.shownPaths.join("+") || "—"}</span>
+            <span className="tag" title={best.shownPaths.map((p) => PATH_NAME[p]).join(" + ")}>
+              {best.shownPaths.join("+") || "—"}
+            </span>
             <span className="rmeta">{best.label}</span>
             <span className="need short">{tt - best.cost} TT spare</span>
           </div>
@@ -66,7 +69,7 @@ export function FarmSection({
                     className={"pchip" + (live ? " live" : "")}
                     style={{ "--pc": PATH_COLOR[p] }}
                     onClick={() => promote(p)}
-                    title={live ? `Priority ${i + 1}` : "Not bought at this capacity"}
+                    title={`${PATH_NAME[p]} — ${live ? `priority ${i + 1}` : "not bought at this capacity"}`}
                   >
                     <span className="rank">{live ? i + 1 : "–"}</span>{p}
                   </button>
@@ -101,7 +104,7 @@ export function FarmSection({
             <div className="note">
               Next tier: <span className="mono">{farm.next.cost} TT</span> ({farm.next.label}) —
               {farm.next.cost > tt ? ` +${farm.next.cost - tt} TT to go` : farm.next.unmet.length === 0 ? " affordable" : " affordable, but gated"}
-              {farm.next.unmet.length > 0 && ` · needs ${farm.next.unmet.map(([e, n]) => `EC${e}x${n}`).join(", ")}`}
+              {farm.next.unmet.length > 0 && ` · mark ${farm.next.unmet.map(([e, n]) => `EC${e}x${n}`).join(", ")} done above to unlock`}
             </div>
           )}
           <button className="more" onClick={togglePanel}>

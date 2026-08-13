@@ -21,6 +21,13 @@ export const DEFAULT_ORDER = { ep: ["ID", "TD", "AD"], dilation: ["TD", "AD", "I
 // What each "paths owned" capacity level corresponds to in game.
 export const CAP_NOTE = { 1: "one path", 2: "TS201", 3: "1e10 DT upgrade" };
 
+export const PATH_NAME = {
+  AD: "Antimatter Dimension path",
+  ID: "Infinity Dimension path",
+  TD: "Time Dimension path",
+  "-": "No path split",
+};
+
 export const PATH_COLOR = {
   AD: "var(--ad)",
   ID: "var(--id)",

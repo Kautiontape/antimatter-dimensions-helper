@@ -1,4 +1,4 @@
-import { keyOf } from "../ECRoutePlanner.jsx";
+import { keyOf } from "../lib/keys.js";
 import { TreeBar } from "./TreeBar.jsx";
 
 // Next completions you can't afford yet, closest first.

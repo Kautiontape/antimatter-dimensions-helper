@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { PATH_COLOR } from "../lib/constants.js";
-import { keyOf } from "../ECRoutePlanner.jsx";
+import { PATH_COLOR, PATH_NAME } from "../lib/constants.js";
+import { keyOf } from "../lib/keys.js";
 import { TreeBar } from "./TreeBar.jsx";
 
 // Challenges affordable at the current TT, in route order.
@@ -18,7 +18,8 @@ export function ReadySection({
         <span className="stat">{ready.length} available at {tt} TT</span>
       </div>
       <div className="lede">
-        Listed in route order, not by number — step {ready.length ? stepOf[keyOf(ready[0].entry)] + 1 : "–"} of {total} is next.
+        {ready.length > 0 && <>Listed in route order, not by number — step {stepOf[keyOf(ready[0].entry)] + 1} of {total} is next. </>}
+        One card per challenge: finish a completion (✓ Done) and its next one appears.
         {routeIsCustom
           ? " You're on a customized route order."
           : " The Steam guide agrees with this route except for one swap; namu differs on two, both flagged below."}
@@ -33,7 +34,13 @@ export function ReadySection({
           <button className="more" onClick={dismissMark}>dismiss</button>
         </div>
       )}
-      {ready.length === 0 && <div className="empty">Nothing affordable yet — see the next gate below.</div>}
+      {ready.length === 0 && (
+        <div className="empty">
+          {tt === 0
+            ? "Enter your Total TT (top right) and mark any completions you already have — the route fills in from there."
+            : "Nothing affordable yet — see the next gate below."}
+        </div>
+      )}
       {ready.map((r) => {
         const e = r.entry;
         const best = r.best;
@@ -45,7 +52,7 @@ export function ReadySection({
             <div className="rhead">
               <span className="stepnum">{stepOf[keyOf(e)] + 1}</span>
               <span className="rlabel">EC{r.ec}x{r.next}</span>
-              <span className="tag">{best.path}</span>
+              <span className="tag" title={PATH_NAME[best.path] || ""}>{best.path}</span>
               <span className="rmeta">
                 needs {e.tt} TT{e.time ? ` · ~${e.time}` : ""}
               </span>
@@ -62,8 +69,8 @@ export function ReadySection({
               >✓ Done</button>
             </TreeBar>
             {best.comp !== r.next && (
-              <div className="swap">
-                ▲ Using the EC{r.ec}x{best.comp} tree ({best.tt} TT) instead of the EC{r.ec}x{r.next} one ({e.tt} TT) — same challenge, strictly more studies at your TT.
+              <div className="upgrade">
+                ↑ Showing the EC{r.ec}x{best.comp} tree ({best.tt} TT) — same challenge, strictly more studies than the EC{r.ec}x{r.next} tree at your TT.
               </div>
             )}
             {e.contest && <div className="swap">◆ Guides disagree here. {e.contest}</div>}
@@ -71,7 +78,7 @@ export function ReadySection({
             {best.comp !== r.next && best.note && <div className="note">EC{r.ec}x{best.comp} note: {best.note}</div>}
             {r.ec === 8 && (
               <div className="note">
-                Requirement-farm tree (buy EC8, then respec): <span className="mono" style={{ color: "var(--warn)" }}>{ec8farm}</span>
+                Requirement-farm tree (buy EC8, then respec): <span className="mono inlinetree" style={{ color: "var(--warn)" }}>{ec8farm}</span>
                 <button className="btn ghost" style={{ marginLeft: 8, height: 22 }} onClick={() => copy(ec8farm, key + "f")}>
                   {copied === key + "f" ? "Copied" : "Copy"}
                 </button>
