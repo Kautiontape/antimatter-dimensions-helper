@@ -68,11 +68,14 @@ npm run build    # production build to dist/
 
 Vite + React, no other runtime dependencies. Pushes to `main` deploy to GitHub Pages via Actions.
 
+Chakra Petch and JetBrains Mono are self-hosted from `src/fonts` (latin and latin-ext, both OFL 1.1) rather than linked from Google Fonts, which rotates its hashed subset filenames behind a stylesheet browsers cache for a day — long enough to strand visitors on a 404 and drop them to fallback type.
+
 ### Layout
 
 ```
 src/
   App.jsx                    # site shell; tool registry, hash routing
+  fonts.css, fonts/          # self-hosted webfonts
   tools/ec-route/
     ECRoutePlanner.jsx       # state + composition
     data/                    # route entries, time study graph, farming tiers
