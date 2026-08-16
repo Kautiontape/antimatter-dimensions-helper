@@ -1,6 +1,6 @@
 # Antimatter Dimensions Helper
 
-Companion tools for [Antimatter Dimensions](https://ivark.github.io/AntimatterDimensions/). One tool so far, with more planned as the playthrough progresses.
+Companion tools for [Antimatter Dimensions](https://ivark.github.io/AntimatterDimensions/), added as the playthrough reaches them.
 
 **Live:** https://kautiontape.github.io/antimatter-dimensions-helper/
 
@@ -26,6 +26,38 @@ Completions and settings persist in localStorage. A settings panel adds:
 
 Trees are recommendations, not the only way through.
 
+## Automator Scripts
+
+A repository for Automator scripts, and the EC route written out as one.
+
+The generated route script farms to each step's TT threshold, respecs into that step's tree, runs the challenge, and Eternities — the planner's process, in the Automator's own language:
+
+```
+// 5x1 · 147 TT
+// unlock needs 160 Galaxies
+auto infinity 1e20 x highest
+until total tt >= 147 {
+  studies nowait purchase FARM1
+  wait pending ep > ep
+  pause 6s
+  eternity respec
+}
+auto infinity 1e10 x highest
+if ec5 completions < 1 {
+  studies purchase 11,21,22,32,42,51|5!
+  wait pending completions >= 1
+  eternity respec
+}
+```
+
+- **Auto-eternity stays off.** The script triggers every Eternity itself, which needs no unlocks and stops the autobuyer from leaving a challenge before the completions land. Auto-infinity is the only autobuyer it sets, and it's editable: one level for farming, one for challenges, one for **EC4**, which caps Infinities at 16/12/8/4/**0** per completion and so gets `auto infinity off` for its fifth. **EC12**'s sub-second time limit is flagged in a comment rather than pretended away.
+- **Idempotent.** Every challenge sits inside a `completions` check, so the script can be re-run from the top and picks up where you are. It can also read the planner's tracked completions and skip what's done, or emit just the next 6 or 12 steps.
+- **Sized for the game.** Farming trees are hoisted into `FARM*` constants and the route is split across script slots to stay inside the game's limits (10,000 characters per script, 60,000 total, 20 scripts, 30 constants).
+
+The repository also carries the Automator's five built-in templates, the two loops the route script is made of on their own, and scripts published by other players — [Ninjatsu's PreECR](https://steamcommunity.com/sharedfiles/filedetails/?id=3040232174) and [u/tovion's full EC ladder](https://reddit.com/r/AntimatterDimensions/comments/13o48j3/first_script_after_unlocking_automator/) — verbatim and credited.
+
+Your own scripts save to localStorage. The whole library exports as JSON, and any single script can be copied as an `AntimatterDimensionsAutomatorScriptFormat…` string that the game's import box accepts; pasting one back in adds it to your library, constants included. Nothing is checked against the game's parser — this stores and moves scripts, it doesn't validate them.
+
 ## Development
 
 ```sh
@@ -40,17 +72,20 @@ Vite + React, no other runtime dependencies. Pushes to `main` deploy to GitHub P
 
 ```
 src/
-  App.jsx                    # site shell; tool registry for future tools
+  App.jsx                    # site shell; tool registry, hash routing
   tools/ec-route/
     ECRoutePlanner.jsx       # state + composition
     data/                    # route entries, time study graph, farming tiers
     lib/                     # tree parsing/repair/cost logic, storage
     components/              # one file per section of the UI
+  tools/automator/
+    AutomatorRepo.jsx        # state + composition
+    data/                    # built-in templates, community scripts, assembly
+    lib/                     # route → script generator, game transfer codec
+    components/              # list, detail, generator options, export/import
 ```
 
-## Planned
-
-- Automator script helper, once the playthrough reaches the Automator.
+The Automator tool reads the route out of `tools/ec-route/data` rather than keeping a copy, so the script and the planner can't drift apart. Command syntax, the character limits, and the transfer format all follow [the game's source](https://github.com/IvarK/AntimatterDimensionsSourceCode) (`src/core/automator`).
 
 ## License
 

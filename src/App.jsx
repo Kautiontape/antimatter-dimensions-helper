@@ -1,12 +1,28 @@
+import { useEffect, useState } from "react";
 import ECRoutePlanner from "./tools/ec-route/ECRoutePlanner.jsx";
+import AutomatorRepo from "./tools/automator/AutomatorRepo.jsx";
 
-// One tool for now; when more arrive this becomes a registry with simple routing.
 const TOOLS = [
   { id: "ec-route", name: "EC Route Planner", component: ECRoutePlanner },
+  { id: "automator", name: "Automator Scripts", component: AutomatorRepo },
 ];
 
+// The hash is the whole router: it survives a reload and gives each tool a
+// linkable address without pulling in a routing library.
+function toolFromHash() {
+  const id = window.location.hash.replace(/^#\/?/u, "");
+  return TOOLS.find((t) => t.id === id) || TOOLS[0];
+}
+
 export default function App() {
-  const tool = TOOLS[0];
+  const [tool, setTool] = useState(toolFromHash);
+
+  useEffect(() => {
+    const onHash = () => setTool(toolFromHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
   const Tool = tool.component;
   return (
     <div className="site">
@@ -15,7 +31,16 @@ export default function App() {
           <span className="sitemark">⚛︎</span>
           <span className="sitename">Antimatter Dimensions Helper</span>
           <nav className="sitenav">
-            <span className="sitetool on">{tool.name}</span>
+            {TOOLS.map((t) => (
+              <a
+                key={t.id}
+                className={`sitetool${t.id === tool.id ? " on" : ""}`}
+                href={`#/${t.id}`}
+                aria-current={t.id === tool.id ? "page" : undefined}
+              >
+                {t.name}
+              </a>
+            ))}
           </nav>
           <a
             className="sitelink"
